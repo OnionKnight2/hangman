@@ -19,6 +19,8 @@
 # At the start of any turn, instead of making a guess the player should also have the option to save the game
 
 module Hangman
+  require 'yaml'
+
   MAX_MISTAKES = 7
 
   class Player
@@ -32,11 +34,11 @@ module Hangman
   end
 
   class Game
-    attr_accessor :player, :secret_word, :saved
+    attr_accessor :player, :secret_word, :do_save
     def initialize
       @player = Player.new
       @secret_word = '' 
-      @saved = false
+      @do_save = false
     end
 
     def play
@@ -52,9 +54,12 @@ module Hangman
 
         display_all_guesses(player.letters)
 
-        @saved = ask_to_save
-        
-        
+        @do_save = ask_to_save
+        if do_save
+          save_file
+          break
+        end
+
         enter_letter(player)
 
         check_letter(player.current_letter, secret_word)
@@ -69,6 +74,15 @@ module Hangman
 
     def won?
       !display_correct_letters(player.letters, secret_word).include?('_')
+    end
+
+    def to_yaml
+      YAML.dump(
+        {
+          player: @player,
+          secret_word: @secret_word
+        }
+      )
     end
   end
 
@@ -148,15 +162,24 @@ module Hangman
   end
 
   def ask_to_save
-    puts "Would you like to save the game? (y/n)"
-    saved = gets.chomp.downcase
-    until ['y', 'n'].include?(saved)
-      puts "Would you like to save the game? (y/n)"
-      saved = gets.chomp.downcase
+    puts "Would you like to exit and save the game? (y/n)"
+    do_save = gets.chomp.downcase
+    until ['y', 'n'].include?(do_save)
+      puts "Would you like to exit and save the game? (y/n)"
+      do_save = gets.chomp.downcase
     end
     puts ''
 
-    return saved == 'y' ? true : false
+    return do_save == 'y' ? true : false
+  end
+
+  def save_file
+    Dir.mkdir('saves') unless Dir.exist?('saves')
+    filename = "saves/save_#{player.name}.yaml"
+
+    File.open(filename, 'w') do |file|
+      file.puts to_yaml
+    end
   end
 end
 
