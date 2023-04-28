@@ -18,6 +18,9 @@
 
 # At the start of any turn, instead of making a guess the player should also have the option to save the game
 
+# When the program first loads, there is an option that allows user to open one of his saved games,
+# which should jump him exactly back to where he was when he saved.
+
 module Hangman
   require 'yaml'
 
@@ -34,11 +37,12 @@ module Hangman
   end
 
   class Game
-    attr_accessor :player, :secret_word, :do_save
+    attr_accessor :player, :secret_word, :do_save, :do_load
     def initialize
       @player = Player.new
       @secret_word = '' 
       @do_save = false
+      @do_load = false
     end
 
     def play
@@ -46,6 +50,12 @@ module Hangman
 
       dictionary = get_words
       @secret_word = select_secret_word(dictionary)
+
+      @do_load = ask_to_load
+      file_to_load = choose_file if do_load
+      loaded_game = load_file(file_to_load) if file_to_load
+
+      from_yaml(loaded_game)
 
       until over? || won?
         display_mistakes(player)
@@ -79,10 +89,22 @@ module Hangman
     def to_yaml
       YAML.dump(
         {
-          player: @player,
+          player: {
+            mistakes: @player.mistakes,
+            letters: @player.letters
+          },
           secret_word: @secret_word
         }
       )
+    end
+
+    def from_yaml(loaded_game)
+      if loaded_game
+        data = YAML.load(loaded_game)
+        @secret_word = data[:secret_word]
+        @player.mistakes = data[:player][:mistakes]
+        @player.letters.append(data[:player][:letters]).flatten!
+      end
     end
   end
 
@@ -173,12 +195,51 @@ module Hangman
     return do_save == 'y' ? true : false
   end
 
+  def ask_to_load
+    puts "Would you like to load one of your saved games? (y/n)"
+    do_load = gets.chomp.downcase
+    until ['y', 'n'].include?(do_load)
+      puts "Would you like to load one of your saved games? (y/n)"
+      do_load = gets.chomp.downcase
+    end
+    puts ''
+
+    return do_load == 'y' ? true : false
+  end
+
   def save_file
     Dir.mkdir('saves') unless Dir.exist?('saves')
     filename = "saves/save_#{player.name}.yaml"
 
     File.open(filename, 'w') do |file|
       file.puts to_yaml
+    end
+  end
+
+  def load_file(filename)
+    unless Dir.empty?('saves')
+      File.read("./saves/#{filename.concat('.yaml')}")
+    end
+  end
+
+  def choose_file
+    files = []
+    d = Dir.new('saves')
+    if Dir.exist?('saves') && !Dir.empty?('saves')
+      d.each_child do |file| 
+        puts "#{File.basename(file, '.yaml')}"
+        files.push(File.basename(file, '.yaml'))
+      end
+      puts ''
+      puts "Enter the file name you want to load: "
+      file_to_load = gets.chomp
+      until files.include?(file_to_load)
+        puts "Enter the file name you want to load: "
+        file_to_load = gets.chomp
+      end
+      file_to_load
+    else
+      puts "There is nothing to load"
     end
   end
 end
