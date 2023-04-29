@@ -1,16 +1,7 @@
 ---
-:player: !ruby/object:Hangman::Player
-  name: rastko
-  mistakes: 6
-  current_letter: w
-  letters:
+:player:
+  :mistakes: 0
+  :letters:
   - a
   - e
-  - r
-  - v
-  - t
-  - s
-  - "n"
-  - p
-  - w
-:secret_word: reject
+:secret_word: passed

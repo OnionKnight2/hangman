@@ -1,0 +1,7 @@
+---
+:player:
+  :mistakes: 1
+  :letters:
+  - a
+  - r
+:secret_word: entry
